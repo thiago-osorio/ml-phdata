@@ -13,6 +13,16 @@ class PredictionResponse(BaseModel):
     metadata: PredictionMetadata = Field(default_factory=PredictionMetadata)
     features_used: Optional[List[str]] = None
 
+class BatchPredictionRequest(BaseModel):
+    predictions: List[Dict[str, Union[int, float]]]
+
+class BatchPredictionResponse(BaseModel):
+    predictions: List[PredictionResponse]
+    batch_metadata: Dict[str, Any] = {
+        "total_predictions": 0,
+        "batch_processing_time_ms": 0.0
+    }
+
 def create_flexible_model(feature_names):
     fields = {}
     for feature_name in feature_names + ["zipcode"]:

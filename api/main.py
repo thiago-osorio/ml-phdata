@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI, HTTPException
 from .config import API_TITLE, API_VERSION
-from .models import PredictionMetadata, PredictionResponse, create_flexible_model
+from .models import PredictionMetadata, PredictionResponse, BatchPredictionRequest, BatchPredictionResponse, create_flexible_model
 from .model_manager import model_manager
 
 logger = logging.getLogger(__name__)
@@ -44,3 +44,39 @@ def reload_model():
     except Exception as e:
         logger.error(f"Erro no reload do modelo: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro no reload: {str(e)}")
+
+@app.post("/predict-batch", response_model=BatchPredictionResponse)
+def predict_batch(request: BatchPredictionRequest):
+    """Predição em batch para múltiplos dados"""
+    logger.info(f"Recebida requisição de predição em batch para {len(request.predictions)} itens")
+
+    try:
+        result = model_manager.get_service().predict_batch(request.predictions)
+        logger.info(f"Batch prediction realizada com sucesso: {len(result['predictions'])} predições")
+
+        prediction_responses = []
+        for pred in result["predictions"]:
+            if "error" in pred:
+                metadata = PredictionMetadata(processing_time_ms=pred.get("processing_time_ms", 0.0))
+                response = PredictionResponse(
+                    predicted_price=pred["predicted_price"],
+                    metadata=metadata,
+                    features_used=pred["features_used"]
+                )
+            else:
+                metadata = PredictionMetadata(processing_time_ms=pred.get("processing_time_ms"))
+                response = PredictionResponse(
+                    predicted_price=pred["predicted_price"],
+                    metadata=metadata,
+                    features_used=pred["features_used"]
+                )
+            prediction_responses.append(response)
+
+        return BatchPredictionResponse(
+            predictions=prediction_responses,
+            batch_metadata=result["batch_metadata"]
+        )
+
+    except Exception as e:
+        logger.error(f"Erro na predição em batch: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Erro na predição em batch: {str(e)}")
