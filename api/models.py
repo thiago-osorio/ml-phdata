@@ -1,8 +1,17 @@
-from pydantic import BaseModel, create_model
-from typing import Union
+from pydantic import BaseModel, create_model, Field
+from typing import Union, Optional, List, Dict, Any
+from datetime import datetime
+import uuid
+
+class PredictionMetadata(BaseModel):
+    prediction_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
+    timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
+    processing_time_ms: Optional[float] = None
 
 class PredictionResponse(BaseModel):
     predicted_price: float
+    metadata: PredictionMetadata = Field(default_factory=PredictionMetadata)
+    features_used: Optional[List[str]] = None
 
 def create_flexible_model(feature_names):
     fields = {}

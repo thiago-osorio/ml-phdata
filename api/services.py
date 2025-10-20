@@ -2,6 +2,7 @@ import logging
 import pandas as pd
 import pickle
 import json
+import time
 from .config import MODEL_PATH, FEATURES_PATH, ZIPCODE_DATA_PATH
 from .exceptions import ModelLoadError, FeaturesLoadError, DataFrameLoadError, PredictionError
 
@@ -63,6 +64,7 @@ class PredictionService:
 
     def predict(self, features_dict):
         try:
+            start_time = time.time()
             logger.debug(f"Iniciando predição com features: {features_dict}")
 
             df = pd.DataFrame([features_dict])
@@ -71,12 +73,19 @@ class PredictionService:
             logger.debug(f"Fazendo merge com dados de zipcode para zipcode: {features_dict.get('zipcode')}")
             df = df.merge(self.zipcode_df, how="left", on="zipcode")
             df = df[self.features_data]
-            df.drop(columns="zipcode", inplace=True)
+            df_clean = df.drop(columns="zipcode")
 
-            prediction = self.model.predict(df)[0]
+            prediction = self.model.predict(df_clean)[0]
             logger.debug(f"Predição calculada: {prediction}")
 
-            return prediction
+            processing_time = (time.time() - start_time) * 1000
+
+            return {
+                "predicted_price": float(prediction),
+                "features_used": list(df_clean.columns),
+                "processing_time_ms": processing_time
+            }
+
         except Exception as e:
             logger.error(f"Erro durante predição: {e}")
             raise PredictionError(f"Falha na predição: {e}")
