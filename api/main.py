@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI, HTTPException
 from .config import API_TITLE, API_VERSION
-from .models import PredictionResponse, create_flexible_model
+from .models import PredictionMetadata, PredictionResponse, create_flexible_model
 from .model_manager import model_manager
 
 logger = logging.getLogger(__name__)
@@ -18,11 +18,15 @@ def predict_price(features: FlexibleHouseFeatures):
         feature_dict = features.model_dump(exclude_none=True)
         logger.debug(f"Features recebidas: {feature_dict}")
 
-        prediction = model_manager.get_service().predict(feature_dict)
-        logger.info(f"Predição realizada com sucesso: {prediction}")
+        result = model_manager.get_service().predict(feature_dict)
+        logger.info(f"Predição realizada com sucesso: {result}")
+
+        metadata = PredictionMetadata(processing_time_ms=result.get("processing_time_ms"))
 
         return PredictionResponse(
-            predicted_price=float(prediction)
+            predicted_price=result["predicted_price"],
+            metadata=metadata,
+            features_used=result["features_used"]
         )
 
     except Exception as e:
