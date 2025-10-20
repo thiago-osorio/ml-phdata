@@ -8,11 +8,18 @@ from .exceptions import ModelLoadError, FeaturesLoadError, DataFrameLoadError, P
 logger = logging.getLogger(__name__)
 
 class PredictionService:
-    def __init__(self):
+    def __init__(self, model=None, features_data=None, zipcode_df=None):
         logger.info("Inicializando PredictionService")
-        self.model = self._load_model()
-        self.features_data = self._load_features()
-        self.zipcode_df = self._load_zipcode_data()
+
+        if model is not None and features_data is not None and zipcode_df is not None:
+            self.model = model
+            self.features_data = features_data if "zipcode" in features_data else features_data + ["zipcode"]
+            self.zipcode_df = zipcode_df
+        else:
+            self.model = self._load_model()
+            self.features_data = self._load_features()
+            self.zipcode_df = self._load_zipcode_data()
+
         logger.info("PredictionService inicializado com sucesso")
 
     def _load_model(self):
