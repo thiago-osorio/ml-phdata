@@ -89,3 +89,39 @@ class PredictionService:
         except Exception as e:
             logger.error(f"Erro durante predição: {e}")
             raise PredictionError(f"Falha na predição: {e}")
+
+    def predict_batch(self, features_list):
+        """Realiza predições em batch para uma lista de features"""
+        try:
+            start_time = time.time()
+            logger.debug(f"Iniciando predição em batch para {len(features_list)} itens")
+
+            predictions = []
+            for i, features_dict in enumerate(features_list):
+                try:
+                    result = self.predict(features_dict)
+                    predictions.append(result)
+                except Exception as e:
+                    logger.error(f"Erro na predição do item {i}: {e}")
+                    # Adiciona predição com erro
+                    predictions.append({
+                        "predicted_price": 0.0,
+                        "features_used": [],
+                        "processing_time_ms": 0.0,
+                        "error": str(e)
+                    })
+
+            batch_processing_time = (time.time() - start_time) * 1000
+            logger.info(f"Batch prediction concluída: {len(predictions)} predições em {batch_processing_time:.2f}ms")
+
+            return {
+                "predictions": predictions,
+                "batch_metadata": {
+                    "total_predictions": len(predictions),
+                    "batch_processing_time_ms": batch_processing_time
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Erro durante predição em batch: {e}")
+            raise PredictionError(f"Falha na predição em batch: {e}")
