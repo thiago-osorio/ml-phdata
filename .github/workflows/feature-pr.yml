@@ -1,0 +1,32 @@
+name: Open/Update PR from feature to main
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open-or-update-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create or update PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(ci): sync feature with main"
+          title: "Feature → main: ${{ github.ref_name }}"
+          body: |
+            Auto PR created from `${{ github.ref_name }}` to `main`.
+          branch: "ci/pr/${{ github.ref_name }}"
+          base: "main"
+          head: ${{ github.ref_name }}
+          labels: "automerge,ci"
+          draft: false
+          update-existing: true
