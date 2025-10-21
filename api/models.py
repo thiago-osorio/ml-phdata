@@ -3,6 +3,16 @@ from typing import Union, Optional, List, Dict, Any
 from datetime import datetime
 import uuid
 
+class PredictionRequest(BaseModel):
+    bedrooms: Union[int, float]
+    bathroms: Union[int, float]
+    sqft_living: Union[int, float]
+    sqft_lot: Union[int, float]
+    floors: Union[int, float]
+    sqft_above: Union[int, float]
+    sqft_basement: Union[int, float]
+    zip_code: Union[int, float]
+
 class PredictionMetadata(BaseModel):
     prediction_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
@@ -22,9 +32,3 @@ class BatchPredictionResponse(BaseModel):
         "total_predictions": 0,
         "batch_processing_time_ms": 0.0
     }
-
-def create_flexible_model(feature_names):
-    fields = {}
-    for feature_name in feature_names + ["zipcode"]:
-        fields[feature_name] = Union[int, float]
-    return create_model("FlexibleHouseFeatures", **fields)

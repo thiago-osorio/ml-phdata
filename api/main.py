@@ -45,6 +45,18 @@ def reload_model():
         logger.error(f"Erro no reload do modelo: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro no reload: {str(e)}")
 
+@app.post("/retrain-model")
+def retrain_model():
+    logger.info("Recebida requisição para retreinar modelo")
+
+    try:
+        result = model_manager.retrain_model()
+        logger.info(f"Resultado do retrain: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Erro no retrain do modelo: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro no retrain: {str(e)}")
+
 @app.post("/predict-batch", response_model=BatchPredictionResponse)
 def predict_batch(request: BatchPredictionRequest):
     """Predição em batch para múltiplos dados"""
