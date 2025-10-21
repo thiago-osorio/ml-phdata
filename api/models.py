@@ -11,7 +11,7 @@ class PredictionRequest(BaseModel):
     floors: Union[int, float]
     sqft_above: Union[int, float]
     sqft_basement: Union[int, float]
-    zip_code: Union[int, float]
+    zipcode: Union[int, float]
 
 class PredictionMetadata(BaseModel):
     prediction_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
