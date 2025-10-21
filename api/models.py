@@ -24,7 +24,7 @@ class PredictionResponse(BaseModel):
     features_used: Optional[List[str]] = None
 
 class BatchPredictionRequest(BaseModel):
-    predictions: List[Dict[str, Union[int, float]]]
+    predictions: List[PredictionRequest]
 
 class BatchPredictionResponse(BaseModel):
     predictions: List[PredictionResponse]
