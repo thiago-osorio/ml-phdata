@@ -9,6 +9,7 @@ from sklearn.preprocessing import RobustScaler
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_percentage_error
 import pickle
 import json
 import time

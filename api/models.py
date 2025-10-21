@@ -5,13 +5,13 @@ import uuid
 
 class PredictionRequest(BaseModel):
     bedrooms: Union[int, float]
-    bathroms: Union[int, float]
+    bathrooms: Union[int, float]
     sqft_living: Union[int, float]
     sqft_lot: Union[int, float]
     floors: Union[int, float]
     sqft_above: Union[int, float]
     sqft_basement: Union[int, float]
-    zip_code: Union[int, float]
+    zipcode: Union[int, float]
 
 class PredictionMetadata(BaseModel):
     prediction_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
@@ -24,7 +24,7 @@ class PredictionResponse(BaseModel):
     features_used: Optional[List[str]] = None
 
 class BatchPredictionRequest(BaseModel):
-    predictions: List[Dict[str, Union[int, float]]]
+    predictions: List[PredictionRequest]
 
 class BatchPredictionResponse(BaseModel):
     predictions: List[PredictionResponse]

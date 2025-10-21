@@ -1,17 +1,15 @@
 import logging
 from fastapi import FastAPI, HTTPException
 from .config import API_TITLE, API_VERSION
-from .models import PredictionMetadata, PredictionResponse, BatchPredictionRequest, BatchPredictionResponse, create_flexible_model
+from .models import PredictionRequest, PredictionMetadata, PredictionResponse, BatchPredictionRequest, BatchPredictionResponse
 from .model_manager import model_manager
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title=API_TITLE, version=API_VERSION)
 
-FlexibleHouseFeatures = create_flexible_model(model_manager.get_service().features_data)
-
 @app.post("/predict", response_model=PredictionResponse)
-def predict_price(features: FlexibleHouseFeatures):
+def predict_price(features: PredictionRequest):
     logger.info("Recebida requisição de predição")
 
     try:
