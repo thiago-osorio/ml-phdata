@@ -3,7 +3,7 @@ import pickle
 import json
 import pandas as pd
 from threading import Lock
-from .services import PredictionService
+from .services import PredictionService, TrainService
 from .config import MODEL_PATH, FEATURES_PATH, ZIPCODE_DATA_PATH
 
 class ModelManager:
@@ -11,6 +11,7 @@ class ModelManager:
         self.lock = Lock()
         self.prediction_service = None
         self.load_model()
+        self.train_service = TrainService()
 
     def load_model(self):
         with self.lock:
@@ -36,6 +37,13 @@ class ModelManager:
         try:
             self.load_model()
             return {"status": "success", "message": "Model reloaded successfully"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    
+    def retrain_model(self):
+        try:
+            self.train_service._train_model()
+            return {"status": "success", "message": "Model retrained successfully"}
         except Exception as e:
             return {"status": "error", "message": str(e)}
 

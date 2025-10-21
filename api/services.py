@@ -1,12 +1,58 @@
 import logging
 import pandas as pd
+from pandas import DataFrame, Series
+from typing import Dict, Any
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.preprocessing import RobustScaler
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 import pickle
 import json
 import time
-from .config import MODEL_PATH, FEATURES_PATH, ZIPCODE_DATA_PATH
+from .config import MODEL_PATH, FEATURES_PATH, ZIPCODE_DATA_PATH, SALES_DATA_PATH, SALES_COLUMN_SELECTION
 from .exceptions import ModelLoadError, FeaturesLoadError, DataFrameLoadError, PredictionError
 
 logger = logging.getLogger(__name__)
+
+class TrainService:
+    def __init__(self):
+        logger.info("Inicializando TrainService")
+        self.data = self._load_data()
+        
+        logger.info("TrainService inicializado com sucesso")
+    
+    def _load_data(self) -> Dict[str, Any]:
+        data = pd.read_csv(SALES_DATA_PATH,usecols=SALES_COLUMN_SELECTION,dtype={'zipcode': str})
+        demographics = pd.read_csv(ZIPCODE_DATA_PATH,dtype={'zipcode': str})
+
+        merged_data = data.merge(demographics, how="left", on="zipcode").drop(columns="zipcode")
+        y = merged_data.pop('price')
+        x = merged_data
+        
+        x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=42)
+        
+        return {
+            "x_train": x_train, 
+            "y_train": y_train, 
+            "x_test": x_test, 
+            "y_test": y_test
+            }
+
+    def _train_model(self):
+        logger.info("Iniciando treinamento do modelo")
+        final_mape = 1
+        for model in [KNeighborsRegressor(), DecisionTreeRegressor(), RandomForestRegressor(), LinearRegression()]:
+            pipe = make_pipeline(RobustScaler(), model).fit(self.data["x_train"], self.data["y_train"])
+            pred = pipe.predict(self.data["x_test"])
+            mape = mean_absolute_percentage_error(y_true=self.data["y_test"], y_pred=pred)
+            if mape < final_mape:
+                final_mape = mape
+                final_model = model
+        pickle.dump(final_model, open(MODEL_PATH, 'wb'))
+        logger.info("Modelo treinado com sucesso")
 
 class PredictionService:
     def __init__(self, model=None, features_data=None, zipcode_df=None):
