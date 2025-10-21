@@ -5,7 +5,7 @@ import uuid
 
 class PredictionRequest(BaseModel):
     bedrooms: Union[int, float]
-    bathroms: Union[int, float]
+    bathrooms: Union[int, float]
     sqft_living: Union[int, float]
     sqft_lot: Union[int, float]
     floors: Union[int, float]
