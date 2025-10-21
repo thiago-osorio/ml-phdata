@@ -1,7 +1,8 @@
 import logging
+from typing import List, Dict, Union
 from fastapi import FastAPI, HTTPException
 from .config import API_TITLE, API_VERSION
-from .models import PredictionRequest, PredictionMetadata, PredictionResponse, BatchPredictionRequest, BatchPredictionResponse
+from .models import PredictionRequest, PredictionMetadata, PredictionResponse, BatchPredictionResponse
 from .model_manager import model_manager
 
 logger = logging.getLogger(__name__)
@@ -56,12 +57,13 @@ def retrain_model():
         raise HTTPException(status_code=500, detail=f"Erro no retrain: {str(e)}")
 
 @app.post("/predict-batch", response_model=BatchPredictionResponse)
-def predict_batch(request: BatchPredictionRequest):
+def predict_batch(features_list: List[PredictionRequest]):
     """Predição em batch para múltiplos dados"""
-    logger.info(f"Recebida requisição de predição em batch para {len(request.predictions)} itens")
+    logger.info(f"Recebida requisição de predição em batch para {len(features_list)} itens")
 
     try:
-        result = model_manager.get_service().predict_batch(request.predictions)
+        features_dicts = [feature.model_dump(exclude_none=True) for feature in features_list]
+        result = model_manager.get_service().predict_batch(features_dicts)
         logger.info(f"Batch prediction realizada com sucesso: {len(result['predictions'])} predições")
 
         prediction_responses = []
