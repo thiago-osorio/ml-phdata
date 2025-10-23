@@ -31,3 +31,7 @@ class BatchPredictionResponse(BaseModel):
         "total_predictions": 0,
         "batch_processing_time_ms": 0.0
     }
+
+class RequiredFeaturesResponse(BaseModel):
+    required_features: List[str]
+    description: str = "Features that must be provided by the user for prediction (excludes zipcode demographic features)"

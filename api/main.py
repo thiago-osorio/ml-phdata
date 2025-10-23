@@ -1,13 +1,36 @@
 import logging
 from typing import List, Dict, Union
 from fastapi import FastAPI, HTTPException
-from .config import API_TITLE, API_VERSION
-from .models import PredictionRequest, PredictionMetadata, PredictionResponse, BatchPredictionResponse
+from .config import API_TITLE, API_VERSION, SALES_COLUMN_SELECTION, TARGET
+from .models import PredictionRequest, PredictionMetadata, PredictionResponse, BatchPredictionResponse, RequiredFeaturesResponse
 from .services import prediction_service
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title=API_TITLE, version=API_VERSION)
+
+@app.get("/features/required", response_model=RequiredFeaturesResponse)
+def get_required_features():
+    """Get the list of features that must be provided by the user for prediction.
+
+    Returns only the features that the user must provide, excluding features
+    that are automatically joined from the zipcode demographics dataset.
+    """
+    logger.info("Received request for required features")
+
+    try:
+        # Features that user must provide (from SALES_COLUMN_SELECTION, excluding price which is the target)
+        required_features = [col for col in SALES_COLUMN_SELECTION if col != TARGET]
+
+        logger.info(f"Returning {len(required_features)} required features")
+
+        return RequiredFeaturesResponse(
+            required_features=required_features
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting required features: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting required features: {str(e)}")
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict_price(features: PredictionRequest):
