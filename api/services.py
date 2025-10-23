@@ -4,10 +4,7 @@ from pandas import DataFrame, Series
 from typing import Dict, Any
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
-from sklearn.tree import DecisionTreeRegressor
 from sklearn.preprocessing import RobustScaler
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_percentage_error
 import pickle
