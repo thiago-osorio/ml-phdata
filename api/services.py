@@ -13,8 +13,7 @@ from sklearn.metrics import mean_absolute_percentage_error
 import pickle
 import json
 import time
-from .config import MODEL_PATH, FEATURES_PATH, ZIPCODE_DATA_PATH, SALES_DATA_PATH, SALES_COLUMN_SELECTION
-from .exceptions import ModelLoadError, FeaturesLoadError, DataFrameLoadError, PredictionError
+from .config import MODEL_PATH, FEATURES_PATH, ZIPCODE_DATA_PATH, SALES_DATA_PATH, SALES_COLUMN_SELECTION, TARGET
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ class TrainService:
         logger.info("TrainService inicializado com sucesso")
     
     def _load_data(self) -> Dict[str, Any]:
-        data = pd.read_csv(SALES_DATA_PATH,usecols=SALES_COLUMN_SELECTION,dtype={'zipcode': str})
+        data = pd.read_csv(SALES_DATA_PATH, usecols=SALES_COLUMN_SELECTION, dtype={'zipcode': str})
         demographics = pd.read_csv(ZIPCODE_DATA_PATH,dtype={'zipcode': str})
 
         merged_data = data.merge(demographics, how="left", on="zipcode").drop(columns="zipcode")
@@ -44,20 +43,19 @@ class TrainService:
 
     def _train_model(self):
         logger.info("Iniciando treinamento do modelo")
-        final_mape = 1
-        for model in [KNeighborsRegressor(), DecisionTreeRegressor(), RandomForestRegressor(), LinearRegression()]:
-            pipe = make_pipeline(RobustScaler(), model).fit(self.data["x_train"], self.data["y_train"])
-            pred = pipe.predict(self.data["x_test"])
-            mape = mean_absolute_percentage_error(y_true=self.data["y_test"], y_pred=pred)
-            if mape < final_mape:
-                final_mape = mape
-                final_model = model
-        pickle.dump(final_model, open(MODEL_PATH, 'wb'))
+        
+        pipe = make_pipeline(RobustScaler(), RandomForestRegressor())
+        pipe.fit(self.data["x_train"], self.data["y_train"])
+        pred = pipe.predict(self.data["x_test"])
+        mape = mean_absolute_percentage_error(y_true=self.data["y_test"], y_pred=pred)
+        logger.info(f"MAPE {round(mape, 4)}")
+        pickle.dump(pipe, open(MODEL_PATH, 'wb'))
+        
         logger.info("Modelo treinado com sucesso")
 
 class PredictionService:
     def __init__(self, model=None, features_data=None, zipcode_df=None):
-        logger.info("Inicializando PredictionService")
+        logger.info("Initializing PredictionService")
 
         if model is not None and features_data is not None and zipcode_df is not None:
             self.model = model
@@ -68,7 +66,34 @@ class PredictionService:
             self.features_data = self._load_features()
             self.zipcode_df = self._load_zipcode_data()
 
-        logger.info("PredictionService inicializado com sucesso")
+        logger.info("PredictionService initialized successfully")
+
+    def reload(self):
+        """Reload the model, features, and zipcode data."""
+        try:
+            logger.info("Reloading PredictionService components")
+            self.model = self._load_model()
+            self.features_data = self._load_features()
+            self.zipcode_df = self._load_zipcode_data()
+            logger.info("PredictionService reloaded successfully")
+            return {"status": "success", "message": "Model reloaded successfully"}
+        except Exception as e:
+            logger.error(f"Error reloading PredictionService: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def retrain(self):
+        """Retrain the model using TrainService."""
+        try:
+            logger.info("Starting model retraining")
+            train_service = TrainService()
+            train_service._train_model()
+            # Reload after training
+            self.reload()
+            logger.info("Model retrained and reloaded successfully")
+            return {"status": "success", "message": "Model retrained successfully"}
+        except Exception as e:
+            logger.error(f"Error retraining model: {e}")
+            return {"status": "error", "message": str(e)}
 
     def _load_model(self):
         try:
@@ -79,7 +104,7 @@ class PredictionService:
             return model
         except Exception as e:
             logger.error(f"Erro ao carregar modelo: {e}")
-            raise ModelLoadError(f"Falha ao carregar modelo: {e}")
+            raise RuntimeError(f"Falha ao carregar modelo: {e}")
 
     def _load_features(self):
         try:
@@ -89,7 +114,7 @@ class PredictionService:
             logger.info("Features carregadas com sucesso")
         except Exception as e:
             logger.error(f"Erro ao carregar features: {e}")
-            raise FeaturesLoadError(f"Falha ao carregar features: {e}")
+            raise ValueError(f"Falha ao carregar features: {e}")
 
         if isinstance(features_data, list):
             return features_data + ["zipcode"]
@@ -107,7 +132,7 @@ class PredictionService:
             return df
         except Exception as e:
             logger.error(f"Erro ao carregar dados de zipcode: {e}")
-            raise DataFrameLoadError(f"Falha ao carregar dados de zipcode: {e}")
+            raise RuntimeError(f"Falha ao carregar dados de zipcode: {e}")
 
     def predict(self, features_dict):
         try:
@@ -115,6 +140,8 @@ class PredictionService:
             logger.debug(f"Iniciando predição com features: {features_dict}")
 
             df = pd.DataFrame([features_dict])
+            train_cols = [col for col in SALES_COLUMN_SELECTION if col != TARGET]
+            df = df[train_cols]
             df["zipcode"] = df["zipcode"].astype(int)
 
             logger.debug(f"Fazendo merge com dados de zipcode para zipcode: {features_dict.get('zipcode')}")
@@ -127,15 +154,22 @@ class PredictionService:
 
             processing_time = (time.time() - start_time) * 1000
 
+            # Extrair nome do modelo final se for um Pipeline
+            if hasattr(self.model, 'steps') and len(self.model.steps) > 0:
+                model_name = type(self.model.steps[-1][1]).__name__
+            else:
+                model_name = type(self.model).__name__
+
             return {
                 "predicted_price": float(prediction),
                 "features_used": list(df_clean.columns),
-                "processing_time_ms": processing_time
+                "processing_time_ms": processing_time,
+                "model_name": model_name
             }
 
         except Exception as e:
             logger.error(f"Erro durante predição: {e}")
-            raise PredictionError(f"Falha na predição: {e}")
+            raise RuntimeError(f"Falha na predição: {e}")
 
     def predict_batch(self, features_list):
         """Realiza predições em batch para uma lista de features"""
@@ -150,11 +184,18 @@ class PredictionService:
                     predictions.append(result)
                 except Exception as e:
                     logger.error(f"Erro na predição do item {i}: {e}")
+                    # Extrair nome do modelo final se for um Pipeline
+                    if hasattr(self.model, 'steps') and len(self.model.steps) > 0:
+                        model_name = type(self.model.steps[-1][1]).__name__
+                    else:
+                        model_name = type(self.model).__name__
+
                     # Adiciona predição com erro
                     predictions.append({
                         "predicted_price": 0.0,
                         "features_used": [],
                         "processing_time_ms": 0.0,
+                        "model_name": model_name,
                         "error": str(e)
                     })
 
@@ -171,4 +212,7 @@ class PredictionService:
 
         except Exception as e:
             logger.error(f"Erro durante predição em batch: {e}")
-            raise PredictionError(f"Falha na predição em batch: {e}")
+            raise RuntimeError(f"Falha na predição em batch: {e}")
+
+# Global instance
+prediction_service = PredictionService()
