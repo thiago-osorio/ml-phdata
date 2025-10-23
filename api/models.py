@@ -1,9 +1,10 @@
-from pydantic import BaseModel, create_model, Field
+from pydantic import BaseModel, create_model, Field, ConfigDict
 from typing import Union, Optional, List, Dict, Any
 from datetime import datetime
 import uuid
 
 class PredictionRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
     bedrooms: Union[int, float]
     bathrooms: Union[int, float]
     sqft_living: Union[int, float]
@@ -17,6 +18,7 @@ class PredictionMetadata(BaseModel):
     prediction_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
     processing_time_ms: Optional[float] = None
+    model_name: Optional[str] = None
 
 class PredictionResponse(BaseModel):
     predicted_price: float

@@ -10,6 +10,7 @@ SALES_COLUMN_SELECTION = [
     'price', 'bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors',
     'sqft_above', 'sqft_basement', 'zipcode'
 ]
+TARGET = "price"
 
 API_TITLE = "House Price Prediction API"
 API_VERSION = "1.0.0"
