@@ -13,7 +13,9 @@ from sklearn.metrics import mean_absolute_percentage_error
 import pickle
 import json
 import time
-from .config import MODEL_PATH, FEATURES_PATH, ZIPCODE_DATA_PATH, SALES_DATA_PATH, SALES_COLUMN_SELECTION, TARGET
+import shutil
+from pathlib import Path
+from .config import MODEL_PATH, MODEL_BACKUP_PATH, FEATURES_PATH, ZIPCODE_DATA_PATH, SALES_DATA_PATH, SALES_COLUMN_SELECTION, TARGET
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,7 @@ class TrainService:
     def _train_model(self):
         logger.info("Iniciando treinamento do modelo")
         
-        pipe = make_pipeline(RobustScaler(), RandomForestRegressor())
+        pipe = make_pipeline(RobustScaler(), RandomForestRegressor(random_state=123))
         pipe.fit(self.data["x_train"], self.data["y_train"])
         pred = pipe.predict(self.data["x_test"])
         mape = mean_absolute_percentage_error(y_true=self.data["y_test"], y_pred=pred)
@@ -81,18 +83,67 @@ class PredictionService:
             logger.error(f"Error reloading PredictionService: {e}")
             return {"status": "error", "message": str(e)}
 
+    def _backup_model(self):
+        """Create a backup of the current model."""
+        try:
+            if Path(MODEL_PATH).exists():
+                logger.info("Creating model backup")
+                shutil.copy2(MODEL_PATH, MODEL_BACKUP_PATH)
+                logger.info("Model backup created successfully")
+                return True
+            else:
+                logger.warning("No model file found to backup")
+                return False
+        except Exception as e:
+            logger.error(f"Error creating model backup: {e}")
+            return False
+
     def retrain(self):
-        """Retrain the model using TrainService."""
+        """Retrain the model using TrainService with backup."""
         try:
             logger.info("Starting model retraining")
+
+            # Create backup before retraining
+            backup_success = self._backup_model()
+            if not backup_success:
+                logger.warning("Model backup failed, continuing with retrain anyway")
+
+            # Retrain the model
             train_service = TrainService()
             train_service._train_model()
+
             # Reload after training
             self.reload()
             logger.info("Model retrained and reloaded successfully")
-            return {"status": "success", "message": "Model retrained successfully"}
+
+            backup_msg = " (backup created)" if backup_success else " (backup failed - old model may not be recoverable)"
+            return {"status": "success", "message": f"Model retrained successfully{backup_msg}"}
+
         except Exception as e:
             logger.error(f"Error retraining model: {e}")
+            return {"status": "error", "message": str(e)}
+
+    def rollback(self):
+        """Rollback to the previous model version."""
+        try:
+            logger.info("Starting model rollback")
+
+            # Check if backup exists
+            if not Path(MODEL_BACKUP_PATH).exists():
+                logger.error("No backup model found for rollback")
+                return {"status": "error", "message": "No backup model found"}
+
+            # Replace current model with backup
+            shutil.copy2(MODEL_BACKUP_PATH, MODEL_PATH)
+            logger.info("Model files restored from backup")
+
+            # Reload the service with the restored model
+            self.reload()
+            logger.info("Model rollback completed successfully")
+            return {"status": "success", "message": "Model rolled back successfully"}
+
+        except Exception as e:
+            logger.error(f"Error during model rollback: {e}")
             return {"status": "error", "message": str(e)}
 
     def _load_model(self):

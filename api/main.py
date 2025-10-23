@@ -59,6 +59,18 @@ def retrain_model():
         logger.error(f"Error retraining model: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Retrain error: {str(e)}")
 
+@app.post("/rollback-model")
+def rollback_model():
+    logger.info("Received request to rollback model")
+
+    try:
+        result = prediction_service.rollback()
+        logger.info(f"Rollback result: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Error rolling back model: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Rollback error: {str(e)}")
+
 @app.post("/predict-batch", response_model=BatchPredictionResponse)
 def predict_batch(features_list: List[PredictionRequest]):
     """Predição em batch para múltiplos dados"""

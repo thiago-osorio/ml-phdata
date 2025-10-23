@@ -3,6 +3,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent
 MODEL_PATH = BASE_DIR / "model" / "model.pkl"
+MODEL_BACKUP_PATH = BASE_DIR / "model" / "model_backup.pkl"
 FEATURES_PATH = BASE_DIR / "model" / "model_features.json"
 ZIPCODE_DATA_PATH = BASE_DIR / "data" / "zipcode_demographics.csv"
 SALES_DATA_PATH = BASE_DIR / "data" / "kc_house_data.csv"
